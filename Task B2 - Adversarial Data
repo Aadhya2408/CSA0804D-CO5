@@ -1,0 +1,62 @@
+from datetime import datetime
+
+F_STATIONS = {'Guindy', 'Velachery'}    # stations reporting Fahrenheit
+PM25_MAX = 1000
+DATE_FORMATS = ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y')
+
+def to_float(text):
+    text = (text or '').strip().replace(',', '.')
+    if text == '' or text.upper() in ('NA', 'N/A', 'NULL', 'NAN'):
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+def norm_date(text):
+    for fmt in DATE_FORMATS:
+        try:
+            return datetime.strptime(text.strip(), fmt).strftime('%Y-%m-%d')
+        except ValueError:
+            pass
+    return None
+
+def norm_station(name):
+    return ' '.join(name.split()).title()
+
+def f_to_c(f):
+    return round((f - 32) * 5 / 9, 1)
+
+def clean_rows(text):
+    reader = csv.DictReader(io.StringIO(text.strip().lstrip('\ufeff')))
+    reader.fieldnames = [h.strip().lower() for h in reader.fieldnames]
+    seen, out = set(), []
+    for rec in reader:
+        st, day = norm_station(rec['station']), norm_date(rec['date'])
+        pm = to_float(rec.get('pm25'))
+        if day is None or pm is None or not (0 <= pm <= PM25_MAX):
+            continue
+        key = (st, day, rec.get('hour', '0'))
+        if key in seen:
+            continue                    # duplicate
+        seen.add(key)
+        temp = to_float(rec.get('temp'))
+        if temp is not None and st in F_STATIONS:
+            temp = f_to_c(temp)
+        out.append((st, day, rec.get('hour', '0'), pm, temp))
+    return out
+
+RSARIAL = """\ufeffStation , DATE,PM25
+ adyar ,2026-10-01,48
+ADYAR,01/10/2026,48
+Adyar,2026-10-04,48 ug
+Adyar,2026-10-05,1e9
+Adyar,2026-10-06,12,5
+Guindy,2026-13-40,60
+Guindy,2026-10-07,nan
+Guindy,2026-10-08, 77
+station,date,pm25
+Velachery,2026-10-09,"55"
+"""
+for r in clean_rows(ADVERSARIAL):
+ print(r)
