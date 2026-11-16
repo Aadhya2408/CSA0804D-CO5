@@ -1,0 +1,22 @@
+import matplotlib.pyplot as plt
+
+clean = [
+    ('Adyar', '2026-10-01', 48.0),
+    ('Guindy', '2026-10-01', 95.0),
+    ('Guindy', '2026-10-03', 121.0)
+]
+
+stations = ['Adyar', 'Guindy']
+
+plt.figure(figsize=(6, 4))
+for name in stations:
+    pts = [(d, p) for s, d, p in clean if s == name]
+    if pts:
+        plt.plot([d for d, _ in pts], [p for _, p in pts], marker='o', label=name)
+
+plt.xlabel('Date')
+plt.ylabel('PM2.5 (ug/m3)')
+plt.title('PM2.5 Trend over Dates')
+plt.legend()
+plt.tight_layout()
+plt.show()
