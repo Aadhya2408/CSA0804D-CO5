@@ -1,0 +1,14 @@
+import matplotlib.pyplot as plt
+
+stations = ['Adyar', 'Guindy']
+means = [48.0, 108.0]
+
+plt.figure(figsize=(6, 4))
+plt.bar(stations, means, color=['tab:blue', 'tab:red'])
+plt.axhline(60, linestyle='--', color='gray', label='Reference limit (60)')
+plt.ylabel('Mean PM2.5 (ug/m3)')
+plt.title('Mean PM2.5 by station, October 2026 sample')
+plt.legend()
+plt.tight_layout()
+plt.savefig('pm25_bar.png', dpi=150)
+plt.show()
