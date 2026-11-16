@@ -1,0 +1,49 @@
+import csv
+import io
+
+RAW = """station,date,pm25
+Adyar,2026-10-01,48
+Adyar,2026-10-02,NA
+Adyar,2026-10-03,
+Guindy,2026-10-01,95
+Guindy,2026-10-02,-5
+Guindy,2026-10-03,121
+"""
+
+def load_clean(text):
+    """Returns (station, date, pm25) tuples for valid, non-negative readings only."""
+    rows = []
+    reader = csv.DictReader(io.StringIO(text.strip()))
+    for rec in reader:
+        raw = (rec.get('pm25') or '').strip()
+        if raw == '' or raw.upper() == 'NA':
+            continue                    # missing
+        try:
+            value = float(raw)
+        except ValueError:
+            continue                    # unexpected text
+        if value < 0:
+            continue                    # sensor fault
+        rows.append((rec['station'].strip(), rec['date'].strip(), value))
+    return rows
+
+def min_max(values):
+    """Scale each value to 0-1 using (v - min) / (max - min), rounded to 3 decimals."""
+    if not values:
+        return []
+    lo, hi = min(values), max(values)
+    if hi == lo:                    # avoid division by zero
+        return [0.0 for _ in values]
+    return [round((v - lo) / (hi - lo), 3) for v in values]
+
+clean = load_clean(RAW)
+print(clean)
+print(min_max([pm for _, _, pm in clean]))
+
+# Validation asserts
+assert len(clean) == 3
+assert all(pm >= 0 for _, _, pm in clean)
+assert min_max([pm for _, _, pm in clean]) == [0.0, 0.644, 1.0]
+assert min_max([5, 5, 5]) == [0.0, 0.0, 0.0] # constant input
+assert min_max([]) == [] # empty input
+print('All validations passed')
