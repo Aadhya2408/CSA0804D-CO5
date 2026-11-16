@@ -1,0 +1,24 @@
+import sqlite3
+
+# Clean data from B1
+clean = [
+    ('Adyar', '2026-10-01', 48.0),
+    ('Guindy', '2026-10-01', 95.0),
+    ('Guindy', '2026-10-03', 121.0)
+]
+
+conn = sqlite3.connect(':memory:')       # use 'airquality.db' for a file
+cur = conn.cursor()
+cur.execute('CREATE TABLE readings (station TEXT, day TEXT, pm25 REAL, '
+            'PRIMARY KEY (station, day))')
+cur.executemany('INSERT OR REPLACE INTO readings VALUES (?, ?, ?)', clean)
+conn.commit()
+
+for row in cur.execute('SELECT station, ROUND(AVG(pm25), 1), COUNT(*) '
+                       'FROM readings GROUP BY station ORDER BY 2 DESC'):
+    print(row)
+
+print(cur.execute('SELECT MAX(pm25) FROM readings WHERE station = ?',
+                  ('Guindy',)).fetchone())
+conn.close()
+```[cite: 2]
