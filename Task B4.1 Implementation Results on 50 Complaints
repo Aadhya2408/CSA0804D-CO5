@@ -1,0 +1,41 @@
+import random
+from collections import Counter
+
+POSITIVE = {'good', 'clean', 'fast', 'helpful', 'improved'}
+NEGATIVE = {'bad', 'dirty', 'slow', 'rude', 'smoke', 'broken'}
+NEGATORS = {'not', 'never', 'no'}
+def score(text):
+    """+1 per positive word, -1 per negative word; a preceding negator flips it."""
+    words = text.lower().replace('.', ' ').replace(',', ' ').split()
+    total = 0
+    for i, w in enumerate(words):
+        if w in POSITIVE:
+            value = 1
+        elif w in NEGATIVE:
+            value = -1
+        else:
+            value = 0
+        if value != 0 and i > 0 and words[i - 1] in NEGATORS:
+            value = -value
+        total += value
+    return total
+
+random.seed(5)
+TEMPLATES = [
+    'The air near the factory is bad, smoke every night.',
+    'Cleaning team was fast and helpful.',
+    'Water tanker is slow and driver was rude.',
+    'Air quality has improved, not bad now.',
+    'The app is not good, data is never updated.',
+    'Road is dirty and the bus is broken.',
+    'Station display is clean and the reading is good.',
+    'No response from the office.',
+]
+complaints = [random.choice(TEMPLATES) for _ in range(50)]
+
+labels = Counter()
+for text in complaints:
+    s = score(text)
+    labels['positive' if s > 0 else 'negative' if s < 0 else 'neutral'] += 1
+print(labels)
+print(sorted(complaints, key=score [:3])  #three most negative
