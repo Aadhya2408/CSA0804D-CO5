@@ -1,0 +1,40 @@
+import random, time, sqlite3, tracemalloc
+import pandas as pd
+from collections import defaultdict
+
+STATIONS = [f'S{i:02d}' for i in range(12)]
+
+def make_rows(n):
+    random.seed(1)
+    return [(random.choice(STATIONS), f'2026-10-{random.randint(1,30):02d}',
+             random.uniform(5, 300)) for _ in range(n)]
+
+def loops(rows):
+    s, c = defaultdict(float), defaultdict(int)
+    for st, _, pm in rows:
+        s[st] += pm; c[st] += 1
+    return {k: s[k] / c[k] for k in s}
+
+def pandas_way(rows):
+    df = pd.DataFrame(rows, columns=['station', 'day', 'pm25'])
+    return df.groupby('station')['pm25'].mean().to_dict()
+
+def sql_way(rows):
+    con = sqlite3.connect(':memory:')
+    con.execute('CREATE TABLE r (station TEXT, day TEXT, pm25 REAL)')
+    con.executemany('INSERT INTO r VALUES (?,?,?)', rows)
+    con.execute('CREATE INDEX ix ON r (station, day)')
+    out = dict(con.execute('SELECT station, AVG(pm25) FROM r GROUP BY station'))
+    con.close()
+    return out
+
+for n in (100_000, 1_000_000, 5_000_000):
+    rows = make_rows(n)
+    for fn in (loops, pandas_way, sql_way):
+        tracemalloc.start()
+        t0 = time.perf_counter()
+        fn(rows)
+        dt = time.perf_counter() - t0
+        peak = tracemalloc.get_traced_memory()[1] / 1e6
+        tracemalloc.stop()
+        print(f'{n:>9} {fn.__name__:<11} {dt:7.3f}s  peak {peak:8.1f} MB')
