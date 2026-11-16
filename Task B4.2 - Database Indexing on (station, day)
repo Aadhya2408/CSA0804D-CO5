@@ -1,0 +1,49 @@
+import sqlite3
+import time
+import random
+
+N_ROWS = 1_000_000       # raise to 3_800_000 if your machine has plenty of RAM
+
+random.seed(2)
+
+def gen_rows(n):
+    for _ in range(n):
+        yield (
+            f'S{random.randint(1, 112):03d}',
+            f'2026-{random.randint(1, 12):02d}-{random.randint(1, 28):02d}',
+            random.randint(0, 95),
+            random.uniform(5, 300),
+        )
+
+con = sqlite3.connect(':memory:')
+con.execute('CREATE TABLE readings (station TEXT, day TEXT, slot INTEGER, pm25 REAL)')
+con.executemany('INSERT INTO readings VALUES (?,?,?,?)', gen_rows(N_ROWS))
+con.commit()
+print('rows loaded:', con.execute('SELECT COUNT(*) FROM readings').fetchone()[0])
+
+Q = ("SELECT AVG(pm25) FROM readings "
+     "WHERE station = 'S042' AND day BETWEEN '2026-10-01' AND '2026-10-31'")
+
+def timed(label, repeats=5):
+    best = float('inf')
+    for _ in range(repeats):
+        t0 = time.perf_counter()
+        result = con.execute(Q).fetchone()[0]
+        best = min(best, time.perf_counter() - t0)
+    print(f'{label:<12} {best * 1000:9.3f} ms  avg={result:.2f}')
+    return best
+
+print('\n--- Query plan BEFORE index ---')
+for row in con.execute('EXPLAIN QUERY PLAN ' + Q):
+    print(row)
+t_no = timed('no index')
+
+con.execute('CREATE INDEX idx_station_day ON readings (station, day)')
+
+print('\n--- Query plan AFTER index ---')
+for row in con.execute('EXPLAIN QUERY PLAN ' + Q):
+    print(row)
+t_ix = timed('with index')
+
+print(f'\nSpeed-up: about {t_no / t_ix:.0f}x faster with the index')
+con.close()
